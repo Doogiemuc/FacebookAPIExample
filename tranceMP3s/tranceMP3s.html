@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>TranceTracks</title>
+    <style type="text/css">
+       ul {
+         list-style-type: none;
+       }
+    </style>
+</head>
+<body>
+  <!--
+    This script fetches youtube URLs from a specific facebook user
+    "lovelytrance.bg" who regularly posts links to Trance music videos.
+    The URLs are fetched via the Facebook Graph API.
+    Doogie, 2013
+  -->
+
+  <script src="/libs/jquery-2.0.3.min.js"></script>
+  <script>
+
+   // url for the Facebook Graph API request. You can test this in the FB Graph Explorer
+   var url = "lovelytrance.bg?fields=feed.fields(description,created_time,feed_targeting,message,source,status_type,story,type)";
+
+   // setup Facebook Javascript API (simple copy&past from the example in the FB docs)
+   console.log("sending ajax request to FB");
+   $.ajaxSetup({ cache: true });
+   $.getScript('http://connect.facebook.net/en_UK/all.js', function(){
+     console.log("have FB script!");
+     
+     FB.init({
+       appId: '196022263578'   // this is my AppID, please create your own one, if you want to use this script.
+     });     
+     
+     // Login to Facebook. This shows a popup window that you must allow in your browser.
+     console.log("Trying to login");
+     FB.login(function(response) {
+       if (response.authResponse) {
+         console.log('Welcome!  Fetching your information.... ');
+         FB.api('/me', function(response) {
+           console.log('Good to see you, ' + response.name + '.');
+         });
+         
+         getYouTubeURLs();
+         
+       } else {
+         console.log('User cancelled login or did not fully authorize.');
+       }
+     }, {scope: 'read_stream'});  // request the read_stream permission
+     
+   }); 
+   
+   // fetch the list of posts of this user and filter out youtube urls with a regular expression
+   function getYouTubeURLs() {
+     console.log("sending FB API request");
+     FB.api(url, function(response) {
+       console.log("Found "+response.feed.data.length+" entries");
+       $.each(response.feed.data, function(index, value){
+         console.log("------------ "+index+" -----------------------");
+         if (value.source) {
+             var match = value.source.match(/(www\.youtube\.com.*)\?/i);
+             if (match) { foundYouTubeURL(index, value, match[1]); }
+         }
+       })
+     });
+   }
+
+   // When an URL was fond, log it and append it to our UL
+   function foundYouTubeURL(index, value, url) {
+       console.log("Description: "+value.description);
+       console.log("Message:     "+value.message);
+       console.log("Source:      "+value.source);
+       console.log("URL:         "+url);
+             
+       //$("#urltable").append("<tr><td>"+index+"</td><td>"+url+"</td><td>"+value.message+"</td></tr>");
+       $("#col1").append("<li>"+index+"</li>");
+       $("#col2").append("<li>"+url+"</li>");
+       $("#col3").append("<li>"+value.message+"</li>");
+   }
+
+  </script>
+    
+  <h3>Happy Downloading</h3>
+  <div id="fb-root"></div>  
+  
+  <table width="100%" id="urltable">
+    <tr><td>
+      <ul id="col1"></ul>
+    </td><td>
+      <ul id="col2"></ul>
+    </td><td>
+      <ul id="col3"></ul>
+    </td></tr>
+  </table>
+  
+  
+</body>
+</html>
+
+<!--
+ Pitfalls that I had and learned from:
+  1. jquery wasn't loaded, cause it was not available as local file
+  2. sending AJAX directly is not allowed due to same origin policy
+  3. you need a FB app with an ID that is used as "user secret" for identifying you
+  3. facebool login window didn't even show caus login popup window was prevented by broher
+  
+//-->
